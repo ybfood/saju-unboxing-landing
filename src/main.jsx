@@ -1,26 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CalendarDays, ChevronDown, Clock, Lock, Mail, MessageSquareText, Phone, User, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, Clock, Lock, Mail, MapPin, MessageSquareText, Phone, User, X } from 'lucide-react';
 import './styles.css';
 
 const products = [
-  { title: '1인 종합사주', price: 40000, image: '/assets/product-total.jpg' },
-  { title: '2인 종합사주', price: 70000, image: '/assets/product-love.jpg' },
-  { title: '태몽풀이', price: 10000, image: '/assets/product-birth.jpg' },
-];
-
-const productTypes = {
-  '1인 종합사주': 'general_saju',
-  '2인 종합사주': 'general_saju_couple',
-  '태몽풀이': 'custom_question',
-};
-
-const fieldBase = [
-  { id: 'name', label: '이름', type: 'text', placeholder: '이름을 입력해주세요', icon: User },
-  { id: 'birth', label: '생년월일', type: 'text', placeholder: '예: 1990.01.01', icon: CalendarDays },
-  { id: 'time', label: '태어난 시간', type: 'text', placeholder: '예: 오전 11:30 / 모름', icon: Clock },
-  { id: 'contact', label: '연락처', type: 'tel', placeholder: '예: 010-1234-5678', icon: Phone },
-  { id: 'email', label: '이메일', type: 'email', placeholder: '예: example@email.com', icon: Mail },
+  { title: '1인 종합사주', price: 40000, type: 'general_saju', image: '/assets/product-total.jpg' },
+  { title: '2인 종합사주', price: 70000, type: 'love_compatibility', image: '/assets/product-love.jpg' },
+  { title: '태몽풀이', price: 10000, type: 'custom_question', image: '/assets/product-birth.jpg' },
 ];
 
 function normalizeBirthDate(value) {
@@ -147,39 +133,60 @@ function App() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+
     const name = String(formData.get('name') || '').trim();
+    const gender = String(formData.get('gender') || '');
     const birthDate = normalizeBirthDate(String(formData.get('birth') || ''));
-    const birthTime = normalizeBirthTime(String(formData.get('time') || ''));
-    const productTitle = String(formData.get('product') || '1인 종합사주');
     const calendarType = String(formData.get('calendar_type') || 'solar');
+    const isLeapMonth = formData.get('is_leap_month') === 'on';
+    const birthTime = normalizeBirthTime(String(formData.get('time') || ''));
+    const birthPlace = String(formData.get('birth_place') || '').trim();
+    const contact = String(formData.get('contact') || '').trim();
     const email = String(formData.get('email') || '').trim();
+    const productTitle = String(formData.get('product') || '1인 종합사주');
     const memo = String(formData.get('memo') || '').trim();
 
+    // 필수값 검증
     if (!name) {
       setSubmitState({ status: 'error', message: '이름을 입력해주세요.' });
+      return;
+    }
+    if (!gender) {
+      setSubmitState({ status: 'error', message: '성별을 선택해주세요.' });
       return;
     }
     if (!birthDate) {
       setSubmitState({ status: 'error', message: '생년월일을 1990.01.01 형식으로 입력해주세요.' });
       return;
     }
+    if (!calendarType) {
+      setSubmitState({ status: 'error', message: '양력/음력을 선택해주세요.' });
+      return;
+    }
     if (birthTime === null) {
       setSubmitState({ status: 'error', message: '태어난 시간은 오전 11:30, 14:30 또는 모름으로 입력해주세요.' });
+      return;
+    }
+    if (!contact) {
+      setSubmitState({ status: 'error', message: '연락처를 입력해주세요.' });
       return;
     }
 
     const selectedProduct = products.find((p) => p.title === productTitle) || products[0];
     const questionText = [productTitle, memo].filter(Boolean).join(' - ');
+
     const payload = {
       customer_name: name,
-      phone: String(formData.get('contact') || '').trim(),
-      email,
-      product_type: productTypes[productTitle] || 'custom_question',
+      gender,
+      product_type: selectedProduct.type,
       birth_date: birthDate,
-      birth_time: birthTime,
       calendar_type: calendarType,
-      gender: String(formData.get('gender') || 'male'),
-      question_text: questionText,
+      is_leap_month: isLeapMonth,
+      ...(birthTime && { birth_time: birthTime }),
+      ...(birthPlace && { birth_place: birthPlace }),
+      phone: contact,
+      ...(email && { email }),
+      ...(memo && { question_text: questionText }),
     };
 
     setSubmitState({ status: 'loading', message: '신청 정보를 접수하고 있습니다.' });
@@ -257,28 +264,16 @@ function App() {
         <h1 id="form-title">신청 정보 입력</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
-            {fieldBase.map(({ id, label, type, placeholder, icon: Icon }) => (
-              <label key={id} htmlFor={id}>
-                <span>{label}</span>
-                <div className="input-wrap">
-                  <Icon size={18} />
-                  <input id={id} name={id} type={type} placeholder={placeholder} />
-                </div>
-              </label>
-            ))}
-            <label htmlFor="calendar_type">
-              <span>양력/음력</span>
-              <div className="segmented triple" role="radiogroup" aria-label="양력/음력 선택">
-                <input id="solar" name="calendar_type" type="radio" value="solar" defaultChecked />
-                <label htmlFor="solar">양력</label>
-                <input id="lunar" name="calendar_type" type="radio" value="lunar" />
-                <label htmlFor="lunar">음력</label>
-                <input id="lunar_leap" name="calendar_type" type="radio" value="lunar_leap" />
-                <label htmlFor="lunar_leap">윤달</label>
+            {/* Row 1: 이름 | 성별 */}
+            <label htmlFor="name">
+              <span>이름 <em className="required">*</em></span>
+              <div className="input-wrap">
+                <User size={18} />
+                <input id="name" name="name" type="text" placeholder="이름을 입력해주세요" />
               </div>
             </label>
             <label htmlFor="gender">
-              <span>성별</span>
+              <span>성별 <em className="required">*</em></span>
               <div className="segmented" role="radiogroup" aria-label="성별 선택">
                 <input id="male" name="gender" type="radio" value="male" defaultChecked />
                 <label htmlFor="male">남성</label>
@@ -286,8 +281,57 @@ function App() {
                 <label htmlFor="female">여성</label>
               </div>
             </label>
+
+            {/* Row 2: 생년월일 | 양력/음력 + 윤달 */}
+            <label htmlFor="birth">
+              <span>생년월일 <em className="required">*</em></span>
+              <div className="input-wrap">
+                <CalendarDays size={18} />
+                <input id="birth" name="birth" type="text" placeholder="예: 1990.01.01" />
+              </div>
+            </label>
+            <label htmlFor="calendar_type">
+              <span>양력/음력 <em className="required">*</em></span>
+              <div className="calendar-group">
+                <div className="segmented" role="radiogroup" aria-label="양력/음력 선택">
+                  <input id="solar" name="calendar_type" type="radio" value="solar" defaultChecked />
+                  <label htmlFor="solar">양력</label>
+                  <input id="lunar" name="calendar_type" type="radio" value="lunar" />
+                  <label htmlFor="lunar">음력</label>
+                </div>
+                <label className="leap-check" htmlFor="is_leap_month">
+                  <input id="is_leap_month" name="is_leap_month" type="checkbox" />
+                  <span>윤달</span>
+                </label>
+              </div>
+            </label>
+
+            {/* Row 3: 태어난 시간 | 태어난 장소 */}
+            <label htmlFor="time">
+              <span>태어난 시간</span>
+              <div className="input-wrap">
+                <Clock size={18} />
+                <input id="time" name="time" type="text" placeholder="예: 오전 11:30 / 모름" />
+              </div>
+            </label>
+            <label htmlFor="birth_place">
+              <span>태어난 장소</span>
+              <div className="input-wrap">
+                <MapPin size={18} />
+                <input id="birth_place" name="birth_place" type="text" placeholder="예: 서울 / 모름" />
+              </div>
+            </label>
+
+            {/* Row 4: 연락처 | 상품 선택 */}
+            <label htmlFor="contact">
+              <span>연락처 <em className="required">*</em></span>
+              <div className="input-wrap">
+                <Phone size={18} />
+                <input id="contact" name="contact" type="tel" placeholder="예: 010-1234-5678" />
+              </div>
+            </label>
             <label htmlFor="product">
-              <span>원하는 상품 선택</span>
+              <span>상품 선택 <em className="required">*</em></span>
               <div className="select-wrap">
                 <MessageSquareText size={18} />
                 <select id="product" name="product" defaultValue="1인 종합사주">
@@ -301,10 +345,21 @@ function App() {
               </div>
             </label>
           </div>
+
+          {/* 이메일 (선택) */}
+          <label htmlFor="email">
+            <span>이메일 <small>(선택)</small></span>
+            <div className="input-wrap">
+              <Mail size={18} />
+              <input id="email" name="email" type="email" placeholder="예: example@email.com" />
+            </div>
+          </label>
+
           <label className="wide" htmlFor="memo">
             <span>추가 메모 <small>(선택)</small></span>
             <textarea id="memo" name="memo" rows="3" placeholder="문의사항이나 특별히 알고 싶은 내용을 자유롭게 입력해주세요" />
           </label>
+
           <p className="privacy"><Lock size={14} /> 입력하신 정보는 상담 및 리포트 제작에만 사용됩니다.</p>
           {submitState.message && (
             <p className={`form-alert ${submitState.status}`} role="status">

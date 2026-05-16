@@ -143,7 +143,7 @@ button, input, textarea, select { font: inherit; }
   color: var(--navy);
 }
 .form-section form { display:flex; flex-direction:column; gap:14px; }
-.form-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+.form-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:14px 12px; }
 .form-section label span { display:block; margin:0 0 6px; font-weight:700; color:#4d3923; }
 .form-section small { color: #90734d; font-size: .82em; }
 .input-wrap, .select-wrap, textarea, .segmented {
@@ -161,7 +161,39 @@ select { appearance: none; padding:0; }
 textarea { padding:13px; resize:vertical; }
 .wide { display:block; }
 .segmented { display:grid; grid-template-columns: 1fr 1fr; padding:4px; }
-.segmented.triple { grid-template-columns: 1fr 1fr 1fr; }
+.calendar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.calendar-group .segmented {
+  flex: 1;
+}
+.leap-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.leap-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+.leap-check span {
+  display: inline;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5f441a;
+}
+.required {
+  color: #c04545;
+  font-style: normal;
+  margin-left: 2px;
+}
 .segmented input { position:absolute; opacity:0; width:1px; }
 .segmented label { display:grid; place-items:center; border-radius:9px; cursor:pointer; font-weight:700; color:#7d6545; }
 .segmented input:checked + label { background:var(--navy); color:#fff8e9; }
